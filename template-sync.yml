@@ -1,0 +1,63 @@
+name: Reusable workflow for syncing from template source
+on:
+  workflow_call:
+    inputs:
+      template-repo:
+        description: 'Source repo in owner/repo formate'
+        required: true
+        type: string
+      create-pr:
+        description: 'Should a PR be created for changes'
+        default: true
+        required: false
+        type: boolean
+    secrets:
+      templatePAT:
+        required: true
+
+jobs:
+  sync:
+    name: Check path
+    runs-on: ubuntu-latest
+    steps:
+      # checkout full repo
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          path: main
+
+      # checkout template repo
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.template-repo }}
+          token: ${{ secrets.templatePAT }}
+          fetch-depth: 0
+          path: template
+
+      - name: Switch to main repo
+        run: cd main
+
+      - name: Config repo user
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+      - name: Add local template repo as remote
+        run: git remote add template $DIR/template/.git
+
+      - name: Create branch for updates
+        if: ${{ inputs.create-pr }}
+        run: git checkout template-updates || git checkout -b template-updates
+
+      - name: Fetch commits
+        run: git fetch --all
+
+      - name: Create merge commit
+        run: git merge template/main --allow-unrelated-histories
+
+      - name: Push changes
+        run: git push origin --all
+
+      - name: Create PR
+        if: ${{ inputs.create-pr }}
+        run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head template-updates
