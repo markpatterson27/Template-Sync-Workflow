@@ -12,8 +12,12 @@ on:
         required: false
         type: boolean
     secrets:
+      workflowPAT:
+        description: 'A PAT scoped to be able to update workflows'
+        required: false
       templatePAT:
-        required: true
+        description: 'A PAT scoped to be able to read the template repo'
+        required: false
 
 jobs:
   sync:
@@ -23,6 +27,7 @@ jobs:
       # checkout full repo
       - uses: actions/checkout@v3
         with:
+          token: ${{ secrets.workflowPAT }}
           fetch-depth: 0
           path: main
 
@@ -61,3 +66,5 @@ jobs:
       - name: Create PR
         if: ${{ inputs.create-pr }}
         run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head template-updates
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
