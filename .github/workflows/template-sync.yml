@@ -65,17 +65,27 @@ jobs:
       # try merging changes from template repo
       - name: Try merge
         id: merge
-        run: git merge template/main --allow-unrelated-histories -X theirs
+        run: |
+          current_sha=$(git rev-parse HEAD)
+          git merge template/main --allow-unrelated-histories -X theirs
+          if [[ $current_sha == $(git rev-parse HEAD) ]]; then
+            echo "No merge"
+            echo "::set-output name=merge::false"
+          else
+            echo "Merge!!"
+            echo "::set-output name=merge::true"
+          fi
         working-directory: ./main
 
       # if merge, push changes
       - name: Push changes
+        if: ${{ steps.merge.outputs.merge != 'false' }}
         run: git push origin --all
         working-directory: ./main
 
       # if merge, create PR
       - name: Create PR
-        if: ${{ inputs.create-pr }}
+        if: ${{ inputs.create-pr && steps.merge.outputs.merge != 'false' }}
         run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head template-updates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
