@@ -39,32 +39,44 @@ jobs:
           fetch-depth: 0
           path: template
 
-      - name: Switch to main repo
-        run: cd main
-
+      # config user name and email
       - name: Config repo user
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
+        working-directory: ./main
 
+      # add local template repo as remote
       - name: Add local template repo as remote
-        run: git remote add template $DIR/template/.git
+        run: git remote add template ../template/.git
+        working-directory: ./main
 
+       # if creating PR for changes, create branch
       - name: Create branch for updates
         if: ${{ inputs.create-pr }}
         run: git checkout template-updates || git checkout -b template-updates
+        working-directory: ./main
 
+      # fetch template commits
       - name: Fetch commits
         run: git fetch --all
+        working-directory: ./main
 
-      - name: Create merge commit
-        run: git merge template/main --allow-unrelated-histories
+      # try merging changes from template repo
+      - name: Try merge
+        id: merge
+        run: git merge template/main --allow-unrelated-histories -X theirs
+        working-directory: ./main
 
+      # if merge, push changes
       - name: Push changes
         run: git push origin --all
+        working-directory: ./main
 
+      # if merge, create PR
       - name: Create PR
         if: ${{ inputs.create-pr }}
         run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head template-updates
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: ./main
