@@ -28,6 +28,7 @@ jobs:
   sync:
     name: Sync from source
     runs-on: ubuntu-latest
+    if: ${{ inputs.template-repo != github.repository }}
     steps:
       # checkout full repo
       - uses: actions/checkout@v3
