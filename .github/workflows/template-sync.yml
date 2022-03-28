@@ -11,6 +11,11 @@ on:
         default: true
         required: false
         type: boolean
+      update-branch-name:
+        description: 'branch name to use for update commits'
+        default: 'source-template-updates'
+        required: false
+        type: string
     secrets:
       workflowPAT:
         description: 'A PAT scoped to be able to update workflows'
@@ -54,7 +59,7 @@ jobs:
        # if creating PR for changes, create branch
       - name: Create branch for updates
         if: ${{ inputs.create-pr }}
-        run: git checkout template-updates || git checkout -b template-updates
+        run: git checkout ${{ inputs.update-branch-name }} || git checkout -b ${{ inputs.update-branch-name }}
         working-directory: ./main
 
       # fetch template commits
@@ -86,7 +91,7 @@ jobs:
       # if merge, create PR
       - name: Create PR
         if: ${{ inputs.create-pr && steps.merge.outputs.merge != 'false' }}
-        run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head template-updates
+        run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head ${{ inputs.update-branch-name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         working-directory: ./main
