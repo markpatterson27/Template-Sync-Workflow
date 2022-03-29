@@ -25,10 +25,55 @@ on:
         required: false
 
 jobs:
+  check-for-updates:
+    name: Check if updates
+    runs-on: ubuntu-latest
+    if: ${{ inputs.template-repo != github.repository }}
+    steps:
+      # get first commit time of main repo
+      - name: main repo creation time
+        id: main-repo
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          created=$(curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$REPO | jq -r .created_at)
+          echo "::set-output name=created::$created"
+          
+      # get last commit time of template source repo
+      - name: template repo update time
+        id: template-repo
+        env:
+          TOKEN: ${{ secrets.templatePAT }}
+          REPO: ${{ inputs.template-repo }}
+        run: |
+          updated=$(curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$REPO | jq -r .updated_at)
+          echo "::set-output name=updated::$updated"
+
+      # compare datetimes
+      - name: compare datetimes
+        id: compare
+        env:
+          CREATED: ${{ steps.main-repo.outputs.created }}
+          UPDATED: ${{ steps.template-repo.outputs.updated }}
+        run: |
+          if [[ "$UPDATED" > "$CREATED" ]]; then
+            echo "Template repo update time is newer than main repo creation time."
+            echo "Updates to template repo assumed."
+            status="true"
+          else
+            status="false"
+          fi
+          echo "::set-output name=updates::$status"
+
+    outputs:
+      updates: ${{ steps.compare.outputs.updates }}
+
   sync:
     name: Pull from template source
     runs-on: ubuntu-latest
-    if: ${{ inputs.template-repo != github.repository }}
+    if: ${{ inputs.template-repo != github.repository && needs.check-for-updates.outputs.updates == 'true' }}
+    needs: check-for-updates
     steps:
       # checkout full repo
       - uses: actions/checkout@v3
