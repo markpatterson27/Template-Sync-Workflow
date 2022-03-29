@@ -47,7 +47,7 @@ jobs:
           TOKEN: ${{ secrets.templatePAT }}
           REPO: ${{ inputs.template-repo }}
         run: |
-          updated=$(curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$REPO | jq -r .updated_at)
+          updated=$(curl -H "Authorization: token $TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$REPO | jq -r .pushed_at)
           echo "::set-output name=updated::$updated"
 
       # compare datetimes
