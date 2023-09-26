@@ -3,7 +3,7 @@ on:
   workflow_call:
     inputs:
       template-repo:
-        description: 'Source repo in owner/repo formate'
+        description: 'Source repo in owner/repo format'
         required: true
         type: string
       create-pr:
