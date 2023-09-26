@@ -76,14 +76,14 @@ jobs:
     needs: check-for-updates
     steps:
       # checkout full repo
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.workflowPAT }}
           fetch-depth: 0
           path: main
 
       # checkout template repo
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: ${{ inputs.template-repo }}
           token: ${{ secrets.templatePAT }}
