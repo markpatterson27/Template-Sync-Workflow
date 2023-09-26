@@ -23,6 +23,7 @@ jobs:
       template-repo: <owner>/<tempate-repo>
       create-pr: true
       update-branch-name: source-template-updates
+      update-strategy: merge
     secrets:
       workflowPAT: ${{ secrets.SYNC_TOKEN }}
       templatePAT: ${{ secrets.SYNC_TOKEN }}

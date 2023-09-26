@@ -16,6 +16,12 @@ on:
         default: 'source-template-updates'
         required: false
         type: string
+      update-strategy:
+        description: 'How to handle updates'
+        default: 'merge'
+        required: false
+        type: string
+        enum: ['merge', 'cherry-pick', 'squash']
     secrets:
       workflowPAT:
         description: 'A PAT scoped to be able to update workflows'
@@ -68,6 +74,7 @@ jobs:
 
     outputs:
       updates: ${{ steps.compare.outputs.updates }}
+      created: ${{ steps.main-repo.outputs.created }}
 
   sync:
     name: Pull from template source
@@ -113,8 +120,9 @@ jobs:
         run: git fetch --all
         working-directory: ./main
 
-      # try merging changes from template repo
+      # if merge strat, try merging changes from template repo
       - name: Try merge
+        if: ${{ inputs.update-strategy == 'merge' }}
         id: merge
         run: |
           current_sha=$(git rev-parse HEAD)
@@ -128,15 +136,31 @@ jobs:
           fi
         working-directory: ./main
 
-      # if merge, push changes
+      # if cherry-pick strat, try cherry-picking changes from template repo
+      - name: Try cherry-pick
+        if: ${{ inputs.update-strategy == 'cherry-pick' }}
+        id: cherry-pick
+        run: |
+          current_sha=$(git rev-parse HEAD)
+          git cherry-pick --no-merges --strategy-option=theirs --since="${{ needs.check-for-updates.outputs.created }}" template/main
+          if [[ $current_sha == $(git rev-parse HEAD) ]]; then
+            echo "No cherry-pick"
+            echo "::set-output name=cherry-pick::false"
+          else
+            echo "Cherry-pick!!"
+            echo "::set-output name=cherry-pick::true"
+          fi
+        working-directory: ./main
+
+      # if new commits, push changes
       - name: Push changes
-        if: ${{ steps.merge.outputs.merge != 'false' }}
+        if: ${{ steps.merge.outputs.merge != 'false' || steps.cherry-pick.outputs.cherry-pick != 'false' }}
         run: git push origin --all
         working-directory: ./main
 
       # if merge, create PR
       - name: Create PR
-        if: ${{ inputs.create-pr && steps.merge.outputs.merge != 'false' }}
+        if: ${{ inputs.create-pr && (steps.merge.outputs.merge != 'false' || steps.cherry-pick.outputs.cherry-pick != 'false') }}
         run: gh pr create --title "Upstream update" --body "Updates from source template." --base main --head ${{ inputs.update-branch-name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
