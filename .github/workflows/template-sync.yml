@@ -17,11 +17,10 @@ on:
         required: false
         type: string
       update-strategy:
-        description: 'How to handle updates'
+        description: 'How to handle updates. Can be `merge` or `cherry-pick`.'
         default: 'merge'
         required: false
         type: string
-        enum: ['merge', 'cherry-pick', 'squash']
     secrets:
       workflowPAT:
         description: 'A PAT scoped to be able to update workflows'
